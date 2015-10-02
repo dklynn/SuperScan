@@ -54,7 +54,3 @@ There are many configurable items (in the configure.php script) and this file is
 SuperScan is NOT copyright but I would ask that these introductory comments remain for posterity.
 	
 David K. "DK" Lynn
-
-Data Koncepts
-
-dk@datakoncepts.com
