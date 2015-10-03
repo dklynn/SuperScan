@@ -1,0 +1,6 @@
+/usr/local/bin/php -q /home/account/scanner.php
+
+
+Minute	Hour	Day	Month	Weekday		Command	
+0	*	*	*	*		/usr/local/bin/php -q /home/account/scanner.php
+10	8	*	*	*		/usr/local/bin/php -q /home/account/reporter.php
