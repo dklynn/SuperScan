@@ -21,7 +21,7 @@ if ($_SERVER['REMOTE_ADDR']=='127.0.0.1')
 	// 	and SCANNER_PATH outside (NOT in public_html)	
 	//	define("SCANNER_PATH", "/home/account/superscan/");
 }
-
+$scan_path_length = strlen(SCAN_PATH);
 
 //	Used for testing only!!! Leave false for production use!!!
 //		$testing = true produces prolific troubleshooting output
@@ -54,7 +54,7 @@ $ext_array = array_map('strtolower',$ext_array);
 //		An empty array will return all extensions
 //      *** The $excl_ext array can only contain elements *** 
 //		*** if $ext array above is empty *** 
-$excl_ext = array('ftpquota','txt');
+$excl_array = array('ftpquota','txt','swf','fla');
 //	Make extensions lower case for scanner comparison
 $excl_array = array_map('strtolower',$excl_array);
 
@@ -65,6 +65,9 @@ $extensionless = false;
 //		An empty array will check all directories in the SCAN_PATH tree
 $skip = array("protected", "private");
 
+//	$indent for report indent
+$indent = " &nbsp; &nbsp;";
+$indent2 = $indent . $indent;
 
 //	END OF CONFIGURE
 ?>
