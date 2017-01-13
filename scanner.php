@@ -7,7 +7,7 @@
 //	End of Intro
 
 //	CONFIGURE account for scan
-require('configure_DK.php');
+require('configure.php');
 
 //	INITIALIZE
 //	Initialization of scanner variables and tables
@@ -28,6 +28,10 @@ $current = array();
 $added = array();
 $altered = array();
 $deleted = array();	
+
+//	Pretty Printing
+$indent = '  ';
+$indent2 = '    ';
 
 //	Limit first scan entries in history table
 
@@ -82,6 +86,8 @@ if ($baseline_results)
 	if (0 == $count_baseline) 
 	//	Prior scanned results but empty baseline table
 	{
+		//	NOT first scan!!!
+		$report .= (!mail('support@iozoom.com','MySQL server failed - please restart',$message,'FROM: dk@datakoncepts.com')) ? "Could not send e-mail to support staff!\r\n\r\n" : "E-mail sent to support staff to restart MySQL server";
 		//	Check for database hack by checking $firstscan
 		if (!$firstscan)
 		{
@@ -100,12 +106,23 @@ if ($baseline_results)
 //	SCAN
 
 //	Scan directories and generate hash values for current files
-$dir = new RecursiveDirectoryIterator(SCAN_PATH);
-$iter = new RecursiveIteratorIterator($dir);
-while ($iter->valid())
+/*	The following 6 lines are replaced in v1.3 so that the 
+	directories to be skipped will actually be skipped
+	$dir = new RecursiveDirectoryIterator(SCAN_PATH);
+	$iter = new RecursiveIteratorIterator($dir);
+	while ($iter->valid())
+	{
+		// 	Not in Dot AND not in $skip (prohibited) directories
+		if (!$iter->isDot() && !(in_array($iter->getSubPath(), $skip)))
+*/
+
+$dir    = new RecursiveDirectoryIterator(SCAN_PATH);
+$filter = new MyRecursiveFilterIterator($dir);
+$iter   = new RecursiveIteratorIterator($filter, RecursiveIteratorIterator::SELF_FIRST);
+foreach ($iter as $filePath => $fileInfo) 
 {
-	// 	Not in Dot AND not in $skip (prohibited) directories
-	if (!$iter->isDot() && !(in_array($iter->getSubPath(), $skip)))
+	//	Get or set file extension ('' vs null)
+	if (!$iter->isDot() && !is_dir($filePath))
 	{
 		//	Get or set file extension ('' vs null)
 		if (is_null(pathinfo($iter->key(), PATHINFO_EXTENSION)))
@@ -203,7 +220,7 @@ foreach($deleted as $key => $value)
 //	End of Deleted file handling
 
 
-//	PREPARE Report 
+//	PREPARE Report
 	
 //	Get scan duration
 $elapsed = round(microtime(true) - $start, 5);

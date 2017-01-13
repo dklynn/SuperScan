@@ -61,9 +61,29 @@ $excl_array = array_map('strtolower',$excl_array);
 //	Scan extensionless files?
 $extensionless = false;
 
-// 	directories to ignore
-//		An empty array will check all directories in the SCAN_PATH tree
-$skip = array("protected", "private");
+// 	Directories to ignore *-*-*-* UPDATED *-*-*-*
+//	$skip = array(
+//	        'cache','cache_ARJ','cache_LRJ','cache_PaTH','_notes'
+//	);
+//	$skip array is NO LONGER USED
+
+//	Enter comma sepatated quoted directory names to ignore in array 
+	//	RecursiveFilterIterator
+	//	Based on code by lemats at http://nz2.php.net/manual/en/class.recursivefilteriterator.php
+	class MyRecursiveFilterIterator extends RecursiveFilterIterator {
+
+	    public static $FILTERS = array(
+	        'private','personal'
+	    );
+
+	    public function accept() {
+	        return !in_array(
+	            $this->current()->getFilename(),
+	            self::$FILTERS,
+	            true
+	        );
+	    }
+	}
 
 //	$indent for report indent
 $indent = " &nbsp; &nbsp;";
