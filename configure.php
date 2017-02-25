@@ -61,17 +61,28 @@ $email_out = true;
 
 //	E-mail address(es) to send reports
 //		Example: $addresses = array('user1@domain1.com', 'user2@domain2.com');
-$to = 'webmaster@mydomain.com';
+$addresses = array('webmaster@mydomain.com');
+$to = implode(', ',$addresses);
 
 //	Set e-mail headers for scanner & reporter
 $headers_array = array();
+
+//		Example: $cc = array('CarbonCopy1@domain1.com', 'CarbonCopy2@domain2.com');
+$cc_array = array('');
+$cc = implode(', ',$cc_array);
+if (isset($cc) && !empty($cc)) $headers_array[] = 'CC: ' . $cc;
+
+//		Example: $bcc = array('user1@domain1.com', 'user2@domain2.com');
+$bcc_array = array('');
+$bcc = implode(', ',$bcc_array);
+if (isset($bcc) && !empty($bcc)) $headers_array[] = 'BCC: ' . $bcc;
+
 //	FROM for e-mail example: $from = 'SuperScan_CRON@mydomain.com';
 //		- NOT required
 $from = 'SuperScan_CRON@mydomain.com';
 if (isset($from) && !empty($from)) $headers_array[] = 'FROM: ' . $from;
 
 //	REPLY-TO for e-mail example: $from = 'SuperScan_NoReply@mydomain.com'; - NOT required
-//	Example:	$reply = 'SuperScan_NoReply@mydomain.com';
 $reply = 'SuperScan_NoReply@mydomain.com';
 if (isset($reply) && !empty($reply)) $headers_array[] = 'REPLY-TO: ' . $reply;
 $headers = (0 < count($headers_array)) ? implode("\r\n",$headers_array) : '';
