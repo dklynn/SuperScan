@@ -1,0 +1,102 @@
+Update
+
+SuperScan v2.0 is the third iteration of a set of PHP scripts to provide a warning of 
+changed (edited, added or deleted) files to detect a hacker's nefarious work on your 
+website(s). It began with HashScan which simply created a hash of every file within 
+a directory and compared it to the pervious hash values for those files - not very 
+sophisticated.
+
+SuperScan was the result of comments received and code offered by Han Wechgelaer to 
+extend the usability to include more file comparisons (e.g., last modified) and better 
+summary reporting. Unfortunately, my interpretation of PHP's RecursiveDirectoryIterator 
+and RecursiveIterator-Iterator failed to account for my attempt to filter directories 
+(eliminate them from a scan).
+
+SuperScan v2 is a major update for which I consider Jan Bakke of Norway responsible. 
+Jan found and tested my "obvious" error as well as suggested and coded the additional 
+headers for e-mail and performed many tests to validate  and optimize the code. His 
+suggestions, testing, coding and comments were invaluable - MANY THANKS to Jan for his 
+efforts which made v2 possible.
+
+SuperScan v2 corrects the errors of SuperScan by inserting lemats' MyRecursiveFilterIterator 
+to handle directory protection and provided a lot of clean-up of the code as well as 
+the output (HTML for testing and text for e-mail; production use).
+
+SuperScan v2 UPDATES:
+
+1.	Incorporated the lemats' MyRecursiveFilterIterator to correctly prevent scanning 
+    of specified directories (at php.net/manual/en/class.recursivefilteriterator.php).
+2.	Added set_time_limit(120); to prevent early script termination for large file 
+    sets (scanning a 3600+ file account in under 10½ seconds and over 100,000 "files" 
+    scanned in about 1½ minutes). Change the 120 second limit only if you are scanning 
+    a massive number of files or comment it out for less than 3,000 files).
+3.	Jan Bakke discovered that the baseline table's `file_path` set to 200 caused 
+    a problem with artificially long path-to-file strings. I increased the fields' 
+    limits to 255 characters (VARCHAR's max	length) but, if you exceed this limit, 
+    UNcomment lines 90, 102-105 and 202-208 which will count and display those 
+    path-to-file strings exceeding 255 characters (then ignore them because they will 
+    cause database errors). If you need longer string lengths, you may want to try 
+    changing the `file_path` field type to TEXT (NOT recommended because Jan's preliminary 
+    testing showed "it is a performance killer!!").
+4.	Changed the length of the `file_path` to 255 characters in the database fields to 
+    prevent database error for exceeding file path length. This can be updated using 
+    PHPMyAdmin's Import function with UpdateTablesFor2.0.sql. READ the WARNINGs at the 
+    top of the configure script!
+5.	Deleted the $report_out switch because it only duplicated the $testing switch.
+6.	Deleted the $extensionless switch (because you SHOULD scan extensionless files for 
+    changes as they are often executed as PHP scripts).
+7.	Removed the ambiguity of localhost testing using 127.0.0.1 with the use of a 
+    $localtesting switch.
+8.	Allowed the option to add FROM and REPLY-TO headers to e-mail sent by both the 
+    scanner and reporter scripts.
+9.	Replaced 'h' (12 hour format) with 'H' (24 hour format) in 8 locations in the 
+    scanner script.
+10.	Added reporting of database errors.
+11.	Created the $die switch in configure.php to tell the scanner to abort the scan if a 
+    database error is found (it will generally be repeated MANY times); database 
+    connection errors WILL terminate the scripts.
+12.	Used the PHP variable, __LINE__ , to identify the line	number of the mysqli_errors 
+    and corrected it to identify the previous line (with the mysqli_query).
+13.	Counted and reported the number of Recursive-	IteratorIterator (`file_path` 
+    iterations) made during the scan as well as the microtime for execution of the 
+    scan and file difference handling.
+14.	Replaced "if (not directory and not '.' and not '..')" with "if(is_file())".
+15.	Because all files are liberally commented so you can identify the variables and 
+    follow the logic, I have added scanner and reporter scripts without comments or 
+    testing output in a production subdirectory of the ZIP file. Simply upload these 
+    two files to replace the commented scanner and reporter scripts (all configuration 
+    is done in the configure script).
+16.	Added the scan.php script in `online` to run SuperScan from a browser when the files 
+    are NOT located in public_html (they should NEVER be located within public_html but, 
+    if you don't have access to a higher level directory, be sure to password protect 
+    their directory!).
+17.	Moved the database connection for the scanner and reporter scripts to the end of 
+    the configure script.
+18.	Other than extending the time limit for execution (for very large scans) and 
+    eliminating 'negative reports' (which are meant to provide a "warm, fuzzy feeling 
+    that all is okay") at line 287 (" && 0 < $count_changes"), I have made included 
+    all the configuration necessary in the configure script. It should NOT be necessary 
+    to change either the scanner or reporter scripts except for future updates.
+19.	I nearly deleted the `acct` fields from the database	records (and database queries) 
+    but left them in case	someone is using the same database with multiple accounts (but 
+    NOT scanning the same files - which would violate the UNIQUE key of the baseline 
+    table). Feel free to make this modification on your own.
+20.	I was unhappy with the format of the reporter script (and so impressed by Jan Bakke's 
+    testing) that I added fields to the scanned table to record the iterations, files 
+    captured (by the scan) and elapsed time; these are provided for each scan in the 
+    daily report.
+21.	As part of the database clean-up, I also specified the `hash_org` and `hash_new` 
+    fields as CHAR(40) for a marginal speed improvement (because they use a fixed hash 
+    length). If you are already using SuperScan, update your database using 
+    UpdateTablesFor2.0.sql
+
+There are many configurable items (all of which are in the configure.php script). 
+You should not have to modify the scanner.php script (unless there is a PHP 
+max_executible_time ERROR) OR reporter.php script. 
+
+If you have any suggestions for further improvement, I will look into them for any 
+further iteration.
+
+DK
+--
+David K. Lynn
