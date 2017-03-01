@@ -1,7 +1,5 @@
 <?php
-
 // 	CONFIGURE & Connect to Database
-
 require('configure.php');
 
 $report = "$acct SuperScan v2 Daily Report " . date('Y-m-d') . "\r\n\r\n";
@@ -16,13 +14,10 @@ $scanner_sql = "SELECT `scanned`, `changes`, `iterations`, `count_current`, `ela
 $scans = mysqli_query($scandb, $scanner_sql);
 handle_db_error( $scanner_sql, mysqli_error($scandb), __LINE__ );
 
-
 if (!$scans)
 {
 	$report .="No scanner log entries available!\r\n ";
-
 } else {
-
 	while ($scan = mysqli_fetch_assoc($scans))
 	{
 		$scan_timestamp = $scan['scanned'];
@@ -32,7 +27,6 @@ if (!$scans)
 		$elapsed = $scan['elapsed'];
 		
 		//	Capture history records for scan
-
 		$history_sql = "SELECT `stamp`, `status`, `file_path` FROM history WHERE `acct` = '$acct' AND `stamp` = '$scan_timestamp' ORDER BY `status`, `file_path`";
 		$scan_histories = mysqli_query($scandb, $history_sql);
 		handle_db_error( $history_sql, mysqli_error($scandb), __LINE__ );
@@ -45,20 +39,14 @@ if (!$scans)
 				$report .= "$hist_stamp => ".strtoupper($scan_history['status'])." => ".$scan_history['file_path']."\r\n";
 			}
 		} else {
-			$report .= "No entry in the history table!!!\r\n";
+			$report .= "No entry in the history table.\r\n";
 		}
 		$report .= "$changes changes detected in $count_current files ($iterations iterations) in $elapsed seconds.\r\n\r\n";
 	}
 }
 
 // OUTPUT Report
-if ($email_out)
-{
-	$to = (count($addresses)>1) ? implode(", ", $addresses) : $addresses[0]; 
-	$report = str_replace('&nbsp;',' ',$report);
-	mail($to, $acct . ' Integrity Monitor Log Summary Report',$report,$headers);
-}
-
+if ($email_out) mail($to, $acct . ' Integrity Monitor Log Summary Report for' . date('Y-m-d'), $report, $headers);
 if ($testing) echo nl2br($report);
 
 mysqli_close($scandb);
