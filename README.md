@@ -66,6 +66,14 @@
 		of the scanner.php script. Adjust this if necessary to 
 		suit your file structure.
 		
+	SuperScan v2.01 UPDATES:
+	
+	1.	Cleaned-up the e-mail variables $to, $cc, $bcc, $from and 
+		$reply with examples in commented code.
+	2.	Included the account name in e-mail subject for webmasters 
+		monitoring multiple accounts (scanner and reporter reports 
+		as well as database errors).
+	
 	SuperScan v2 UPDATES:
 	
 	1.	Incorporated the lemats' MyRecursiveFilterIterator to 

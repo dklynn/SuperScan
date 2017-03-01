@@ -15,7 +15,7 @@
 		$line = "scandb.php line 10.";
 		$error = mysqli_connect_error($scandb);
 		if ($testing) echo "Database connection error $error <br />";
-		if ($email_out) mail($to,'SuperScan Database Connection ERROR',"SuperScan Database Connection ERROR $error using $query_sql at $line.", $headers);
+		if ($email_out) mail($to,"SuperScan Database Connection ERROR for $acct","SuperScan Database Connection ERROR\r\n$error\r\nusing $query_sql\r\nat $line.", $headers);
 		die();
 	}
 ?>

@@ -1,15 +1,13 @@
 <?php
 
-//	Change PHP's default time limit of 30 seconds if necessary
-//	120 sec is sufficient for 100k iterations (files and directories)
-set_time_limit(120);
+//	set_time_limit(60);	//	Change PHP's default time limit of 30 seconds if necessary
 
 //	CONFIGURE for scan & connect to database
 require('configure.php');
 
 //	INITIALIZE
 
-//	Initialize the title of report
+//	Initialize the report
 $report = "\r\nSuperScan v2 File Check for " . $acct . "\r\n\r\n";
 
 //	Initialize the baseline and current arrays
@@ -18,16 +16,15 @@ $baseline = $current = array();
 //	Intitialize the differences arrays
 $added = $altered = $deleted = array();	
 
-//	Limit first scan entries in history table
-
 //	Get date and time of last scan for report
 $last_scanned_records = mysqli_query($scandb, "SELECT `scanned` FROM scanned WHERE `acct` = '$acct' ORDER BY `scanned` DESC LIMIT 1");
+
+//	Limit first scan entries in history table
 if ($last_scanned_records && 0 < mysqli_num_rows($last_scanned_records))
 {
-	//	Get last timestamp
 	while($last_datetime = mysqli_fetch_assoc($last_scanned_records))
 	{
-		$last_scanned = $last_datetime['scanned'];
+		$last_scanned = $last_datetime['scanned'];	//	Get last timestamp
 		$firstscan = false;
 	}
 } else {
@@ -37,15 +34,13 @@ if ($last_scanned_records && 0 < mysqli_num_rows($last_scanned_records))
 
 //	Set time to synch history and scanned tables
 $time = date('Y-m-d H:i:s');	
-//	Start timer (scan and processing duration)
+//	Start timer (scan and array processing duration)
 $start = microtime(true);
 
 //	END OF INITIALIZE
 
 //	Establish BASELINE
-//	Read from database to obtain file paths, hash values and
-//		last modified dates to compare against current files
-
+//	Read from baseline from database to compare with current files
 $baseline_sql = "SELECT `file_path`, `file_hash`, `file_last_mod` FROM baseline WHERE `acct` = '$acct' ORDER BY `file_path` ASC";
 $baseline_results = mysqli_query($scandb,$baseline_sql);
 handle_db_error( $baseline_sql, mysqli_error($scandb), __LINE__ );
@@ -62,63 +57,43 @@ if ($baseline_results)
 	//	Get the count of baseline records
 	$count_baseline = count($baseline);
 
-	if (0 == $count_baseline)
-	//	Prior scanned results but empty baseline table
+	if (0 == $count_baseline)	//	Prior scanned results but empty baseline table
 	{
-		//	Check for database hack by checking $firstscan
-		if (!$firstscan)
-		{
+		if (!$firstscan)	//	Check for database hack by checking $firstscan
 			$report .= "Empty baseline table!\r\nPROBABLE HACK ATTACK\r\n(ALL files are missing/deleted)!\r\n\r\n";	
-		}
 	}
-	
 	$report .= "$count_baseline baseline files extracted from database.\r\n";
 }
-//	Baseline files read into baseline array and baseline_count made
 
-
-//	SCAN SCAN_PATH directory and subdirectories
-
-//	Scan directories and generate hash values for current files
+//	Scan SCAN_PATH directory and subdirectories
 $dir    = new RecursiveDirectoryIterator(SCAN_PATH);	//	Top level of scan
 $filter = new MyRecursiveFilterIterator($dir);			//	Filtered iterator
 $iter   = new RecursiveIteratorIterator($filter, RecursiveIteratorIterator::SELF_FIRST);	//	File Iterator
 
-//	Count iterations of file paths (as examined by SuperScan)
-$iterations = 0;
+$iterations = 0;	//	Count iterations of file paths
 
-	//	*** WARNING ***
-	//	Paths exceeding field length for file_path will result in database errors!
-	//	Change 255 to the max length of your file_path field in `baseline`
-	//		and `history` tables - use code in UpdateTablesFor2.0.sql to update
-	//	SuperScan v 1.x used VARCHAR(200), MySQL can only use 255 for
-	//		a VARCHAR string OR a TEXT (64k) field.
-	//	file_path length error initialization
-//	$length_error = array();
+//	$length_error = array();	// Uncomment if file_path longer than file_path field
 
 foreach ($iter as $filePath => $fileInfo)
 {
 	$iterations++;
-
+	//	Uncomment if file_path length errors from db
 	/*	if (255 < strlen($filePath)) {
 	//	$length_error[] = $filePath;	//	Log excessive file path
 	//		continue;					//	Skip to next iteration
-										//	(get next $filePath)
 	}	*/
-
 	$file_path = $filePath;
 
-	//	Ensure $file_path uses /'s, not \'s [Windows backslash problem]
+	//	Ensure $file_path uses /'s, not \'s (Windows backslash problem)
 	$file_path = str_replace(chr(92),chr(47),$file_path);
 
 	//	If not directory, process file
 	if (is_file($file_path))
 	{
-
-		//	Get file extension
+		//	Get file extension (lower case)
 		$ext = strtolower(substr($file_path,strrpos($file_path,'.')+1));
 
-		//	Check for $ext empty AND not excluded ext OR $ext in $ext_array
+		//	Check for ($ext empty AND not excluded ext) OR $ext in $ext_array
 		if ((empty($ext_array) && !in_array($ext,$excl_array)) || in_array($ext,$ext_array))
 		{	//	Handle addition to $current array
 			$current[$file_path] = array('file_hash' => hash_file("sha1", $file_path), 'file_last_mod' => date("Y-m-d H:i:s", filemtime($file_path)));
@@ -134,7 +109,7 @@ foreach ($iter as $filePath => $fileInfo)
 				handle_db_error( $added_baseline_sql, mysqli_error($scandb), __LINE__ );
 
 				//	INSERT added file record in history table
-				//		EXCEPT if $firstscan (to prevent unnecessary records)
+				//		UNLESS it is $firstscan (to prevent unnecessary records)
 				if(!$firstscan)
 				{
 					$added_history_sql = "INSERT INTO history SET `stamp` = '$time', `status` = 'Added', `file_path` = '$file_path', `hash_org` = 'Not Applicable', `hash_new` = '" . $added[$file_path]['file_hash'] . "', `file_last_mod` = '" . $added[$file_path]['file_last_mod'] . "', `acct` = '$acct'";
@@ -146,7 +121,8 @@ foreach ($iter as $filePath => $fileInfo)
 					mysqli_query($scandb, $added_firstscan_history_sql);
 					handle_db_error( $added_firstscan_history_sql, mysqli_error($scandb), __LINE__ ); */
 				}	//	End of handling $added array entry
-			} else {	//	IF file was ALTERED
+			} else {	
+				//	IF file was ALTERED
 				if ($baseline[$file_path]['file_hash'] <> $current[$file_path]['file_hash'] || $baseline[$file_path]['file_last_mod'] <> $current[$file_path]['file_last_mod'])
 				{
 					$altered[$file_path] = array('hash_org' => $baseline[$file_path]['file_hash'], 'hash_new' => $current[$file_path]['file_hash'], 'file_last_mod' => $current[$file_path]['file_last_mod']);
@@ -168,13 +144,12 @@ foreach ($iter as $filePath => $fileInfo)
 
 //	HANDLE DELETED FILES
 //	Compare $baseline and $current arrays to generate $deleted array
-//	$deleted contains records where file_path is
-//		in $baseline but not in $current
+//	array_diff_key finds array of records where file_path is in $baseline 
+//		but not $current
 $deleted = array_diff_key($baseline, $current);
 
-foreach($deleted as $key => $value)
+foreach($deleted as $key => $value)	//	Handle DELETEd files
 {
-	//	Handle DELETEd file
 	//	DELETE file from baseline table
 	$delete_baseline_sql = "DELETE FROM baseline WHERE `file_path` = '$key' LIMIT 1";
 	mysqli_query($scandb, $delete_baseline_sql);
@@ -185,9 +160,7 @@ foreach($deleted as $key => $value)
 	mysqli_query($scandb, $delete_history_sql);
 	handle_db_error( $delete_history_sql, mysqli_error($scandb), __LINE__ );
 }
-
 //	End of Deleted file handling
-
 
 //	PREPARE Report
 
@@ -195,8 +168,8 @@ foreach($deleted as $key => $value)
 $elapsed_iterations = round(microtime(true) - $start, 4);
 $elapsed = number_format($elapsed_iterations, 4, '.', '');
 	
-/*	Delect comment code if you want the long file_path warnings
-if (!empty($length_error)) {
+//	Uncomment code if you want the long file_path warnings listed
+/*if (!empty($length_error)) {
 	$report .= "\r\nWARNING: path-to-file string length exceeded (" . count($length_error) . " times).\r\nThe following files were NOT processed:\r\n";
 	foreach($length_error as $path_error) {
 		$report .= "$indent XXXX $path_error\r\n";
@@ -207,19 +180,13 @@ if (!empty($length_error)) {
 //	Add count summary to report
 $count_current = count($current);
 $report .= "$iterations file & directory iterations examined.\r\n";
-if (0 == $count_current)
-{
-	//	ALL files are gone!
-	$report .= "\r\nThere are NO files in the specified location.\r\n";
-	if (!$firstscan) $report .= "This indicates a possible HACK ATTACK\r\nOR an incorrect path to the account's files\r\n";
-}
+if (0 == $count_current)	//	ALL files are gone!
+	$report .= "\r\nThere are NO files in the specified location\r\n(" . SCAN_PATH . ").\r\n";
 
 $count_added = count($added);
 $report .= "$indent $count_added files ADDED to baseline.\r\n";
 if (!$firstscan)
-{
 	foreach($added as $filename => $value) $report .= "$indent2 + " . substr($filename,$scan_path_length) . "\r\n";
-}
 
 $count_altered = count($altered);
 $report .= "$indent $count_altered ALTERED files updated.\r\n";
@@ -233,7 +200,7 @@ echo "\r\n";
 
 $count_changes = $count_added + $count_altered + $count_deleted;
 	
-//	Completed update of history table for Unchanged
+//	Update history table for Unchanged
 
 if (0 == $count_changes)
 {
@@ -249,9 +216,7 @@ if (0 == $count_changes)
 	mysqli_query($scandb, $update_scanned_table_sql);
 	handle_db_error( $update_scanned_table_sql, mysqli_error($scandb), __LINE__ );
 	$report .= "File structure is unchanged since last scan.";
-
 } else {
-
 	$update_scanned_table_sql = "INSERT INTO scanned SET `scanned` = '$time', `changes` = $count_changes, `iterations` = $iterations, `count_current` = $count_current, `elapsed` = '$elapsed', `acct` = '$acct'";
 	mysqli_query($scandb, $update_scanned_table_sql);
 	handle_db_error( $update_scanned_table_sql, mysqli_error($scandb), __LINE__ );
@@ -264,8 +229,11 @@ Changes to baseline: $count_changes\r\n
 $indent Added: $count_added
 $indent Altered: $count_altered
 $indent Deleted: $count_deleted\r\n
-Scan executed in $elapsed seconds.";
-	if (0 < $count_changes) $report .= "\r\n\r\nIf you did not makes these changes, examine your files closely\r\nfor evidence of embedded hacker code or added hacker files.\r\n(WinMerge provides excellent comparisons between your\r\nmaster file and a downloaded file.)";
+Scan executed in $elapsed seconds\r\n\r\n
+If you did not makes these changes, examine your files closely\r\n
+for evidence of embedded hacker code or added hacker files.\r\n
+(WinMerge provides excellent comparisons between your\r\n
+master file and a downloaded file.)";
 }
 
 //	Clean-up history table and scanned table by deleting entries over 30 days old
@@ -277,27 +245,19 @@ $clean_scanned_sql = "DELETE FROM scanned WHERE `scanned` < DATE_SUB(NOW(), INTE
 mysqli_query($scandb, $clean_scanned_sql);
 handle_db_error( $clean_scanned_sql, mysqli_error($scandb), __LINE__ );
 
-//	End of Report preparation and clean-up
-
+//	End of Report preparation and db clean-up
 
 //	OUTPUT Report
 //	E-mail Report
-//		DELETE ' && 0 < $count_changes' if you want negative (no change) reports
-if ($email_out && 0 < $count_changes)
-{
-	mail($to, 'SuperScan Report for ' . $acct,"File and Directory Iterations Performed: $iterations\r\n" . $report, $headers);
-}
+//	DELETE ' && 0 < $count_changes' if you want negative (no change) reports
+if ($email_out && 0 < $count_changes) mail($to, 'SuperScan Report for ' . $acct, $report, $headers);
 
 //	Output Report for testing
-if ($testing)
-{
-	echo str_replace(array("\r\n", "\r", "\n"), "<br />", $report);
-}
+if ($testing) echo str_replace(array("\r\n", "\r", "\n"), "<br />", $report);
 
 //	Destroy tables (release to memory)
 $baseline = $current = $added = $altered = $deleted = array();
 
 //	Close database
 mysqli_close($scandb);
-
 ?>
